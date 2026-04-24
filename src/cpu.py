@@ -56,9 +56,7 @@ class Cpu:
 
     def write_address(self, address, value):
         if address < Cpu.ROM_BOUNDARY:
-            self.rom.set_value_at_address(address, value)
-        elif address < Cpu.VRAM_BOUNDARY:
-            self.vram.get_value_at_address(address, value)
+            raise Exception("Cannot write to rom address")
         elif address < Cpu.EXTERNAL_BOUNDARY:
             pass
         elif address < Cpu.RAM_BOUNDARY:

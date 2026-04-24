@@ -10,6 +10,11 @@ class Cpu:
     HIGH_RAM_BOUNDARY = 0xFFFF
     INTERRUPT_REGISTER_LOCATION = 0xFFFF
 
+    ZERO_FLAG = 7
+    SUBTRACTION_FLAG = 6
+    HALF_CARRY_FLAG = 5
+    CARRY_FLAG = 4
+
     def __init__(self, rom, ram, vram):
         self.pc = 0x0000
         self.sp = 0xFFFE
@@ -58,6 +63,35 @@ class Cpu:
         byte = self.read_address(self.pc)
         self.pc += 1
         return byte
+
+    def set_flag(self, flag, value):
+        if value:
+            self.F |= (1 << flag)
+        else:
+            self.F &= ~(1 << flag)
+
+    def increment_flags(self, a):
+        b = 1
+        result = a + b
+        self.set_flag(Cpu.ZERO_FLAG, (result & 0xFF) == 0)
+        self.set_flag(Cpu.SUBTRACTION_FLAG, False)
+        self.set_flag(Cpu.HALF_CARRY_FLAG, ((a & 0xF) + (b & 0xF)) > 0xF)
+
+    def decrement_flags(self, a):
+        b = 1
+        result = a - b
+        self.set_flag(Cpu.ZERO_FLAG, (result & 0xFF) == 0)
+        self.set_flag(Cpu.SUBTRACTION_FLAG, True)
+        self.set_flag(Cpu.HALF_CARRY_FLAG, ((a & 0xF) - (b & 0xF)) < 0)
+
+    def add_HL_flags(self, a, b):
+        result = a + b
+        self.set_flag(Cpu.SUBTRACTION_FLAG, False)
+        self.set_flag(Cpu.HALF_CARRY_FLAG, ((a & 0xFFF) + (b & 0xFFF)) > 0xFFF)
+        self.set_flag(Cpu.CARRY_FLAG, result > 0xFFFF)
+
+    def zero_flags(self):
+        self.F = 0
 
     def read_address(self, address):
         if address < Cpu.ROM_BOUNDARY:
@@ -145,14 +179,18 @@ class Cpu:
                     self.m_cycle()
                     self.set_register_BC(value)
                 case 0x04:
+                    self.decrement_flags(self.B)
                     self.B += 1
                     self.B &= 0xFF
                 case 0x05:
+                    self.decrement_flags(self.B)
                     self.B -= 1
                     self.B &= 0xFF
                 case 0x06:
                     self.B = self.read_immediate_8()
                 case 0x07:
+                    self.zero_flags()
+                    self.set_flag(Cpu.CARRY_FLAG, (self.A << 1) > 0xFF)
                     bit7 = (self.A >> 7) & 1
 
                     self.A = ((self.A << 1) | bit7) & 0xFF
@@ -161,6 +199,8 @@ class Cpu:
                 case 0x09:
                     value1 = self.get_register_HL()
                     value2 = self.get_register_BC()
+
+                    self.add_HL_flags(value1, value2)
 
                     result = value1 + value2
                     result &= 0xFFFF
@@ -176,14 +216,18 @@ class Cpu:
                     self.m_cycle()
                     self.set_register_BC(value)
                 case 0x0C:
+                    self.increment_flags(self.C)
                     self.C += 1
                     self.C &= 0xFF
                 case 0x0D:
+                    self.decrement_flags(self.C)
                     self.C -= 1
                     self.C &= 0xFF
                 case 0x0E:
                     self.C = self.read_immediate_8()
                 case 0x0F:
+                    self.zero_flags()
                     bit0 = self.A & 1
+                    self.set_flag(Cpu.CARRY_FLAG, bit0)
 
                     self.A = ((self.A >> 1) | bit0 << 7) & 0xFF

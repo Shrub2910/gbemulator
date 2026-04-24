@@ -27,7 +27,7 @@ class Cpu:
         self.vram = vram
 
     def get_next_byte(self):
-        byte = self.program_data[self.pc]
+        byte = self.read_address(self.pc)
         self.pc += 1
         return byte
 
@@ -57,10 +57,12 @@ class Cpu:
     def write_address(self, address, value):
         if address < Cpu.ROM_BOUNDARY:
             raise Exception("Cannot write to rom address")
+        elif address < Cpu.VRAM_BOUNDARY:
+            self.vram.set_value_at_address(address, value)
         elif address < Cpu.EXTERNAL_BOUNDARY:
             pass
         elif address < Cpu.RAM_BOUNDARY:
-            self.ram.get_value_at_address(address, value)
+            self.ram.set_value_at_address(address, value)
         elif address < Cpu.ECHO_BOUNDARY:
             pass
         elif address < Cpu.OAM_BOUNDARY:
@@ -75,6 +77,16 @@ class Cpu:
             pass
         self.m_cycle()
 
+    def read_immediate_16(self):
+        lower = self.rom.get_value_at_address(self.pc)
+        self.pc += 1
+        upper = self.rom.get_value_at_address(self.pc)
+        self.pc += 1
+
+        upper = upper << 8
+
+        return upper + lower
+
     def m_cycle(self):
         for i in range(0, 4):
             self.t_cycles += 1
@@ -84,4 +96,6 @@ class Cpu:
             opcode = self.get_next_byte()
             match opcode:
                 case 0x00:
+                    pass
+                case 0x01:
                     pass

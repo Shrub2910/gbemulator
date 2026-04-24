@@ -8,7 +8,7 @@ class Cpu:
     UNUSED_BOUNDARY = 0xFF00
     IO_REGISTER_BOUNDARY = 0xFF80
     HIGH_RAM_BOUNDARY = 0xFFFF
-    INTERUPT_REGISTER_LOCATION = 0xFFFF
+    INTERRUPT_REGISTER_LOCATION = 0xFFFF
 
     def __init__(self, rom, ram, vram):
         self.pc = 0x0000
@@ -27,40 +27,32 @@ class Cpu:
         self.vram = vram
 
     def get_register_AF(self):
-        self.m_cycle()
-        return self.a + (self.f << 8)
+        return self.F + (self.A << 8)
 
     def set_register_AF(self, value):
-        self.A = value & 0xFF
-        self.F = value >> 8
-        self.m_cycle()
+        self.F = value & 0xFF
+        self.A = value >> 8
 
     def get_register_BC(self):
-        self.m_cycle()
-        return self.B + (self.C << 8)
+        return self.C + (self.B << 8)
 
     def set_register_BC(self, value):
-        self.B = value & 0xFF
-        self.C = value >> 8
-        self.m_cycle()
+        self.C = value & 0xFF
+        self.B = value >> 8
 
     def get_register_DE(self):
-        self.m_cycle()
-        return self.D + (self.E << 8)
+        return self.E + (self.D << 8)
 
     def set_register_DE(self, value):
-        self.D = value & 0xFF
-        self.E = value >> 8
-        self.m_cycle()
+        self.E = value & 0xFF
+        self.D = value >> 8
 
     def get_register_HL(self):
-        self.m_cycle()
-        return self.H + (self.L << 8)
+        return self.L + (self.H << 8)
 
     def set_register_HL(self, value):
-        self.H = value & 0xFF
-        self.L = value >> 8
-        self.m_cycle()
+        self.L = value & 0xFF
+        self.H = value >> 8
 
     def get_next_byte(self):
         byte = self.read_address(self.pc)
@@ -73,21 +65,21 @@ class Cpu:
         elif address < Cpu.VRAM_BOUNDARY:
             return self.vram.get_value_at_address(address)
         elif address < Cpu.EXTERNAL_BOUNDARY:
-            pass
+            raise NotImplementedError("External not implemented")
         elif address < Cpu.RAM_BOUNDARY:
             return self.ram.get_value_at_address(address)
         elif address < Cpu.ECHO_BOUNDARY:
-            pass
+            raise NotImplementedError("Echo not implemented")
         elif address < Cpu.OAM_BOUNDARY:
-            pass
+            raise NotImplementedError("OAM not implemented")
         elif address < Cpu.UNUSED_BOUNDARY:
-            pass
+            raise NotImplementedError("Unused not implemented")
         elif address < Cpu.IO_REGISTER_BOUNDARY:
-            pass
+            raise NotImplementedError("IO register not implemented")
         elif address < Cpu.HIGH_RAM_BOUNDARY:
-            pass
-        elif address == Cpu.INTERUPT_REGISTER_LOCATION:
-            pass
+            raise NotImplementedError("High ram not implemented")
+        elif address == Cpu.INTERRUPT_REGISTER_LOCATION:
+            raise NotImplementedError("Interrupt register not implemented")
         self.m_cycle()
 
     def write_address(self, address, value):
@@ -96,34 +88,41 @@ class Cpu:
         elif address < Cpu.VRAM_BOUNDARY:
             self.vram.set_value_at_address(address, value)
         elif address < Cpu.EXTERNAL_BOUNDARY:
-            pass
+            raise NotImplementedError("External not implemented")
         elif address < Cpu.RAM_BOUNDARY:
             self.ram.set_value_at_address(address, value)
         elif address < Cpu.ECHO_BOUNDARY:
-            pass
+            raise NotImplementedError("Echo not implemented")
         elif address < Cpu.OAM_BOUNDARY:
-            pass
+            raise NotImplementedError("OAM not implemented")
         elif address < Cpu.UNUSED_BOUNDARY:
-            pass
+            raise NotImplementedError("Unused not implemented")
         elif address < Cpu.IO_REGISTER_BOUNDARY:
-            pass
+            raise NotImplementedError("IO register not implemented")
         elif address < Cpu.HIGH_RAM_BOUNDARY:
-            pass
-        elif address == Cpu.INTERUPT_REGISTER_LOCATION:
-            pass
+            raise NotImplementedError("High ram not implemented")
+        elif address == Cpu.INTERRUPT_REGISTER_LOCATION:
+            raise NotImplementedError("Interrupt register not implemented")
         self.m_cycle()
+
+    def read_immediate_8(self):
+        value = self.read_address(self.pc)
+        self.pc += 1
+
+        return value
 
     def read_immediate_16(self):
-        lower = self.rom.get_value_at_address(self.pc)
+        lower = self.read_address(self.pc)
         self.pc += 1
-        upper = self.rom.get_value_at_address(self.pc)
+        upper = self.read_address(self.pc)
         self.pc += 1
-
         upper = upper << 8
 
-        self.m_cycle()
-
         return upper + lower
+
+    def set_a16(self, value):
+        address = self.read_immediate_16()
+        self.write_address(address, value)
 
     def m_cycle(self):
         for i in range(0, 4):
@@ -137,3 +136,36 @@ class Cpu:
                     pass
                 case 0x01:
                     self.set_register_BC(self.read_immediate_16())
+                case 0x02:
+                    self.write_address(self.get_register_BC(), self.A)
+                case 0x03:
+                    value = self.get_register_BC()
+                    value += 1
+                    value &= 0xFFFF
+                    self.m_cycle()
+                    self.set_register_BC(value)
+                case 0x04:
+                    self.B += 1
+                    self.B &= 0xFF
+                case 0x05:
+                    self.B -= 1
+                    self.B &= 0xFF
+                case 0x06:
+                    self.B = self.read_immediate_8()
+                case 0x07:
+                    bit7 = (self.A >> 7) & 1
+
+                    self.A = ((self.A << 1) | bit7) & 0xFF
+                case 0x08:
+                    self.set_a16(self.sp)
+                case 0x09:
+                    value1 = self.get_register_HL()
+                    value2 = self.get_register_BC()
+
+                    result = value1 + value2
+                    result &= 0xFFFF
+                    self.m_cycle()
+
+                    self.set_register_HL(result)
+                case 0x0A:
+                    self.A = self.read_address(self.get_register_BC())

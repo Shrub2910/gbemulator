@@ -26,6 +26,42 @@ class Cpu:
         self.ram = ram
         self.vram = vram
 
+    def get_register_AF(self):
+        self.m_cycle()
+        return self.a + (self.f << 8)
+
+    def set_register_AF(self, value):
+        self.A = value & 0xFF
+        self.F = value >> 8
+        self.m_cycle()
+
+    def get_register_BC(self):
+        self.m_cycle()
+        return self.B + (self.C << 8)
+
+    def set_register_BC(self, value):
+        self.B = value & 0xFF
+        self.C = value >> 8
+        self.m_cycle()
+
+    def get_register_DE(self):
+        self.m_cycle()
+        return self.D + (self.E << 8)
+
+    def set_register_DE(self, value):
+        self.D = value & 0xFF
+        self.E = value >> 8
+        self.m_cycle()
+
+    def get_register_HL(self):
+        self.m_cycle()
+        return self.H + (self.L << 8)
+
+    def set_register_HL(self, value):
+        self.H = value & 0xFF
+        self.L = value >> 8
+        self.m_cycle()
+
     def get_next_byte(self):
         byte = self.read_address(self.pc)
         self.pc += 1
@@ -85,6 +121,8 @@ class Cpu:
 
         upper = upper << 8
 
+        self.m_cycle()
+
         return upper + lower
 
     def m_cycle(self):
@@ -98,4 +136,4 @@ class Cpu:
                 case 0x00:
                     pass
                 case 0x01:
-                    pass
+                    self.set_register_BC(self.read_immediate_16())

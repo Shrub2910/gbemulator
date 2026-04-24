@@ -7,9 +7,9 @@ class Ram(Memory):
 
     def __init__(self):
         self.data = [0]*0x2000
-    
-    def get_value_at_address(self,address):
-        return self.data[address-L_boundary]
 
-    def set_value_at_address(self,address,value):
-        self.data[address-L_boundary] = value
+    def get_value_at_address(self, address):
+        return self.data[address - Ram.L_BOUNDARY]
+
+    def set_value_at_address(self, address, value):
+        self.data[address - Ram.L_BOUNDARY] = value

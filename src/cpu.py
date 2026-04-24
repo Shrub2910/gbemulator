@@ -169,3 +169,21 @@ class Cpu:
                     self.set_register_HL(result)
                 case 0x0A:
                     self.A = self.read_address(self.get_register_BC())
+                case 0x0B:
+                    value = self.get_register_BC()
+                    value -= 1
+                    value &= 0xFFFF
+                    self.m_cycle()
+                    self.set_register_BC(value)
+                case 0x0C:
+                    self.C += 1
+                    self.C &= 0xFF
+                case 0x0D:
+                    self.C -= 1
+                    self.C &= 0xFF
+                case 0x0E:
+                    self.C = self.read_immediate_8()
+                case 0x0F:
+                    bit0 = self.A & 1
+
+                    self.A = ((self.A >> 1) | bit0 << 7) & 0xFF
